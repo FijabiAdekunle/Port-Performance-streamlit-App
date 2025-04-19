@@ -15,7 +15,7 @@ st.set_page_config(
 @st.cache_data
 
 def load_data():
-    df = pd.read_csv("port_data.csv")
+    df = pd.read_csv("us_port_cleaned_dataset.csv")
     df.columns = df.columns.str.strip()
     return df
 
