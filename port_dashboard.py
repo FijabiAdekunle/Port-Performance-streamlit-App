@@ -1,105 +1,88 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-
-# Load data
-df = pd.read_csv("your_dataset.csv")  # Change to actual file name
+import matplotlib.pyplot as plt
+import seaborn as sns
+from io import BytesIO
 
 # Page config
-st.set_page_config(page_title="Maritime Port Performance Dashboard", layout="wide")
-
-# Title
-st.title("📊 Maritime Port Performance Dashboard (2022–2023)")
-st.markdown("This dashboard provides interactive insights into UNCTAD’s maritime port performance data (2022–2023).")
-
-# Sidebar filters
-st.sidebar.header("🔎 Filter Options")
-vessel_types = st.sidebar.multiselect(
-    "Select Vessel Type(s)", 
-    options=df["vessel_type"].unique(),
-    default=df["vessel_type"].unique()
+st.set_page_config(
+    page_title="Maritime Port Performance Dashboard",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-periods = st.sidebar.multiselect(
-    "Select Period(s)", 
-    options=df["period"].unique(),
-    default=df["period"].unique()
+# Load data
+@st.cache_data
+
+def load_data():
+    df = pd.read_csv("port_data.csv")
+    df.columns = df.columns.str.strip()
+    return df
+
+df = load_data()
+
+# Sidebar filters
+st.sidebar.title("🔎 Filter Options")
+
+vessel_types = df["vessel_type"].dropna().unique().tolist()
+selected_vessels = st.sidebar.multiselect(
+    "Select Vessel Type(s)",
+    options=vessel_types,
+    default=vessel_types,
+)
+
+periods = df["period"].dropna().unique().tolist()
+selected_periods = st.sidebar.multiselect(
+    "Select Period(s)",
+    options=periods,
+    default=periods,
 )
 
 # Filter data
 filtered_df = df[
-    (df["vessel_type"].isin(vessel_types)) &
-    (df["period"].isin(periods))
+    (df["vessel_type"].isin(selected_vessels)) &
+    (df["period"].isin(selected_periods))
 ]
 
-# KPIs section
+# Header
+st.title("📊 Maritime Port Performance Dashboard (2022–2023)")
+st.markdown("This dashboard provides interactive insights into UNCTAD’s maritime port performance data (2022–2023).")
+
+# KPI Section
 st.subheader("📌 Key Performance Indicators (KPIs)")
-kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
 
-try:
-    kpi_col1.metric(
-        label="Avg. Time in Port (Days)",
-        value=f"{filtered_df['median_time_in_port'].mean():.2f}",
-        help="Average median time vessels spend in port"
-    )
+col1, col2, col3 = st.columns(3)
 
-    kpi_col2.metric(
-        label="Avg. Vessel Age",
-        value=f"{filtered_df['avg_vessel_age'].mean():.2f} yrs",
-        help="Average vessel age during period"
-    )
+avg_time = filtered_df["median_time_in_port"].mean()
+avg_age = filtered_df["avg_vessel_age"].mean()
+avg_teu = filtered_df["avg_container_capacity_TEU"].mean()
 
-    kpi_col3.metric(
-        label="Avg. Container Capacity (TEU)",
-        value=f"{filtered_df['avg_container_capacity_TEU'].mean():,.0f}",
-        help="Average container capacity in Twenty-foot Equivalent Units"
-    )
-except Exception as e:
-    st.error(f"Error calculating KPIs: {e}")
+col1.metric("Avg. Time in Port (Days)", f"{avg_time:.1f}" if not pd.isna(avg_time) else "N/A")
+col2.metric("Avg. Vessel Age", f"{avg_age:.1f} yrs" if not pd.isna(avg_age) else "N/A")
+col3.metric("Avg. Container Capacity (TEU)", f"{int(avg_teu):,}" if not pd.isna(avg_teu) else "N/A")
 
-st.markdown("---")
+st.info("💡 **KPI** = Key Performance Indicator — a metric summarizing an important performance attribute.")
 
 # Visualizations
 st.subheader("📈 Visualizations")
 
-# Select metric
-metric_options = {
-    "Avg. Time in Port": "median_time_in_port",
-    "Avg. Vessel Age": "avg_vessel_age",
-    "Avg. Size (GT)": "avg_size_GT",
-    "Avg. Container Capacity (TEU)": "avg_container_capacity_TEU",
-    "Avg. Cargo Capacity (DWT)": "avg_cargo_capacity_DWT"
-}
-metric_choice = st.selectbox("Choose Metric to Visualize", list(metric_options.keys()))
-selected_column = metric_options[metric_choice]
+metric_choice = st.selectbox("Choose a metric to visualize", [
+    "median_time_in_port",
+    "avg_vessel_age",
+    "avg_container_capacity_TEU",
+    "avg_size_GT",
+    "avg_cargo_capacity_DWT"
+])
 
-# Line chart
-fig = px.line(
-    filtered_df.groupby(["period", "vessel_type"])[selected_column].mean().reset_index(),
-    x="period",
-    y=selected_column,
-    color="vessel_type",
-    markers=True,
-    title=f"{metric_choice} Over Time by Vessel Type"
-)
-st.plotly_chart(fig, use_container_width=True)
+st.caption("Metric displayed across vessel types and periods.")
 
-# Summary
-st.subheader("📝 Summary")
-st.dataframe(filtered_df, use_container_width=True)
-
-# Export Button
-@st.cache_data
-def convert_df(df):
-    return df.to_csv(index=False).encode("utf-8")
-
-csv = convert_df(filtered_df)
-st.download_button(
-    label="⬇️ Export Filtered Data as CSV",
-    data=csv,
-    file_name="filtered_port_performance.csv",
-    mime="text/csv"
-)
-
-# Footer
-st.markdown("🔹 *KPI: Key Performance Indicator — a metric summarizing an important performance attribute.*")
+if not filtered_df.empty:
+    grouped_df = (
+        filtered_df.groupby(["period", "vessel_type"])[metric_choice]
+        .mean()
+        .reset_index()
+    )
+    plt.figure(figsize=(12, 6))
+    sns.lineplot(data=grouped_df, x="period", y=metric_choice, hue="vessel_type", marker="o")
+    plt.title(f"{metric_choice.replace('_', ' ').title()} Over Time by Vessel Type")
+    plt.xticks(rotation=
