@@ -1,118 +1,105 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.express as px
 
-# Load cleaned data
-df = pd.read_csv("us_port_cleaned_dataset.csv")
+# Load data
+df = pd.read_csv("your_dataset.csv")  # Change to actual file name
 
-st.set_page_config(page_title="Maritime Port Dashboard", layout="wide")
+# Page config
+st.set_page_config(page_title="Maritime Port Performance Dashboard", layout="wide")
 
-# --- Sidebar Filters ---
+# Title
+st.title("📊 Maritime Port Performance Dashboard (2022–2023)")
+st.markdown("This dashboard provides interactive insights into UNCTAD’s maritime port performance data (2022–2023).")
+
+# Sidebar filters
 st.sidebar.header("🔎 Filter Options")
-vessel_options = df['vessel_type'].unique()
-period_options = df['period'].unique()
+vessel_types = st.sidebar.multiselect(
+    "Select Vessel Type(s)", 
+    options=df["vessel_type"].unique(),
+    default=df["vessel_type"].unique()
+)
 
-selected_vessel = st.sidebar.multiselect("Select Vessel Type(s)", vessel_options, default=vessel_options)
-selected_period = st.sidebar.multiselect("Select Period(s)", period_options, default=period_options)
+periods = st.sidebar.multiselect(
+    "Select Period(s)", 
+    options=df["period"].unique(),
+    default=df["period"].unique()
+)
 
-# Filter Data
-filtered_df = df[df['vessel_type'].isin(selected_vessel) & df['period'].isin(selected_period)]
+# Filter data
+filtered_df = df[
+    (df["vessel_type"].isin(vessel_types)) &
+    (df["period"].isin(periods))
+]
 
-# --- Tabs Layout ---
-tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "📈 Visualizations", "📝 Summary"])
+# KPIs section
+st.subheader("📌 Key Performance Indicators (KPIs)")
+kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
 
-# ========== TAB 1: DASHBOARD ==========
-with tab1:
-    st.title("📊 Maritime Port Performance Dashboard (2022–2023)")
-    st.markdown("This dashboard provides interactive insights into UNCTAD’s maritime port performance data (2022–2023).")
-    
-    # --- KPI Section ---
-    st.subheader("📌 Key Performance Indicators (KPIs)")
-
-    kpi1, kpi2, kpi3 = st.columns(3)
-    kpi1.metric("Avg. Time in Port (Days)", f"{filtered_df['median_time_in_port'].mean():.1f}")
-    kpi2.metric("Avg. Vessel Age", f"{filtered_df['avg_vessel_age'].mean():.1f} yrs")
-    kpi3.metric("Avg. Container Capacity (TEU)", f"{filtered_df['avg_container_capacity_TEU'].mean():,.0f}")
-
-    # --- Tooltip help ---
-    st.help("KPI: Key Performance Indicator — a metric summarizing an important performance attribute.")
-
-    # --- Export Button ---
-    csv = filtered_df.to_csv(index=False).encode('utf-8')
-    st.download_button("📥 Export Filtered Data to CSV", data=csv, file_name="filtered_port_data.csv", mime='text/csv')
-
-# ========== TAB 2: VISUALIZATIONS ==========
-with tab2:
-    st.header("📈 Interactive Visualizations")
-
-    # Select plot
-    plot_type = st.selectbox("Choose a plot to display", [
-        "Boxplot: Time in Port by Vessel Type",
-        "Boxplot: Average Size (GT) by Vessel Type",
-        "Boxplot: Time in Port by Period",
-        "Boxplot: Average Size (GT) by Period",
-        "Correlation Heatmap"
-    ])
-
-    if plot_type == "Boxplot: Time in Port by Vessel Type":
-        fig, ax = plt.subplots(figsize=(10,5))
-        sns.boxplot(x='vessel_type', y='median_time_in_port', data=filtered_df, ax=ax)
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
-
-    elif plot_type == "Boxplot: Average Size (GT) by Vessel Type":
-        fig, ax = plt.subplots(figsize=(10,5))
-        sns.boxplot(x='vessel_type', y='avg_size_GT', data=filtered_df, ax=ax)
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
-
-    elif plot_type == "Boxplot: Time in Port by Period":
-        fig, ax = plt.subplots(figsize=(10,5))
-        sns.boxplot(x='period', y='median_time_in_port', data=filtered_df, ax=ax)
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
-
-    elif plot_type == "Boxplot: Average Size (GT) by Period":
-        fig, ax = plt.subplots(figsize=(10,5))
-        sns.boxplot(x='period', y='avg_size_GT', data=filtered_df, ax=ax)
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
-
-    elif plot_type == "Correlation Heatmap":
-        numerical_cols = filtered_df.select_dtypes(include='number')
-        fig, ax = plt.subplots(figsize=(12,10))
-        sns.heatmap(numerical_cols.corr(), annot=True, cmap='coolwarm', ax=ax)
-        st.pyplot(fig)
-
-    # --- Line Chart Section ---
-    st.subheader("📉 Line Chart: Compare Metrics Across Vessel Types")
-
-    metric_choice = st.selectbox(
-        "Choose a metric",
-        ['median_time_in_port', 'avg_size_GT', 'avg_cargo_capacity_DWT', 'avg_container_capacity_TEU']
+try:
+    kpi_col1.metric(
+        label="Avg. Time in Port (Days)",
+        value=f"{filtered_df['median_time_in_port'].mean():.2f}",
+        help="Average median time vessels spend in port"
     )
 
-    line_df = filtered_df.groupby("vessel_type")[metric_choice].mean().reset_index()
-    fig_line, ax = plt.subplots(figsize=(10, 5))
-    sns.lineplot(data=line_df, x='vessel_type', y=metric_choice, marker='o', ax=ax)
-    plt.xticks(rotation=45)
-    plt.title(f"{metric_choice} by Vessel Type")
-    st.pyplot(fig_line)
+    kpi_col2.metric(
+        label="Avg. Vessel Age",
+        value=f"{filtered_df['avg_vessel_age'].mean():.2f} yrs",
+        help="Average vessel age during period"
+    )
 
-# ========== TAB 3: SUMMARY ==========
-with tab3:
-    st.header("📝 Summary of Findings")
-    st.markdown("""
-    ### 📌 EDA Insights
-    - **Vessel Age**: Average age ~15–18 years. Container and LNG ships tend to be newer.
-    - **Time in Port**: Container ships are faster in turnaround; Breakbulk and passenger ships stay longer.
-    - **Vessel Size & Capacity**: Larger GT often corresponds with higher cargo (DWT) and container (TEU) capacities.
-    - **Period Consistency**: Stable metrics across 2022–2023; no drastic performance shifts.
+    kpi_col3.metric(
+        label="Avg. Container Capacity (TEU)",
+        value=f"{filtered_df['avg_container_capacity_TEU'].mean():,.0f}",
+        help="Average container capacity in Twenty-foot Equivalent Units"
+    )
+except Exception as e:
+    st.error(f"Error calculating KPIs: {e}")
 
-    ### 📌 Summary
-    - **Container ships** appear most efficient in port time.
-    - **LNG carriers** show larger average sizes.
-    - **Operational consistency** was maintained across both years.
-    - Dataset suitable for clustering or unsupervised ML in future.
-    """)
+st.markdown("---")
+
+# Visualizations
+st.subheader("📈 Visualizations")
+
+# Select metric
+metric_options = {
+    "Avg. Time in Port": "median_time_in_port",
+    "Avg. Vessel Age": "avg_vessel_age",
+    "Avg. Size (GT)": "avg_size_GT",
+    "Avg. Container Capacity (TEU)": "avg_container_capacity_TEU",
+    "Avg. Cargo Capacity (DWT)": "avg_cargo_capacity_DWT"
+}
+metric_choice = st.selectbox("Choose Metric to Visualize", list(metric_options.keys()))
+selected_column = metric_options[metric_choice]
+
+# Line chart
+fig = px.line(
+    filtered_df.groupby(["period", "vessel_type"])[selected_column].mean().reset_index(),
+    x="period",
+    y=selected_column,
+    color="vessel_type",
+    markers=True,
+    title=f"{metric_choice} Over Time by Vessel Type"
+)
+st.plotly_chart(fig, use_container_width=True)
+
+# Summary
+st.subheader("📝 Summary")
+st.dataframe(filtered_df, use_container_width=True)
+
+# Export Button
+@st.cache_data
+def convert_df(df):
+    return df.to_csv(index=False).encode("utf-8")
+
+csv = convert_df(filtered_df)
+st.download_button(
+    label="⬇️ Export Filtered Data as CSV",
+    data=csv,
+    file_name="filtered_port_performance.csv",
+    mime="text/csv"
+)
+
+# Footer
+st.markdown("🔹 *KPI: Key Performance Indicator — a metric summarizing an important performance attribute.*")
