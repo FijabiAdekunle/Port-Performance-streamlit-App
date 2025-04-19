@@ -85,4 +85,40 @@ if not filtered_df.empty:
     plt.figure(figsize=(12, 6))
     sns.lineplot(data=grouped_df, x="period", y=metric_choice, hue="vessel_type", marker="o")
     plt.title(f"{metric_choice.replace('_', ' ').title()} Over Time by Vessel Type")
-    plt.xticks(rotation=
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    st.pyplot(plt.gcf())
+else:
+    st.warning("No data available for the selected filters.")
+
+# Export button
+st.subheader("📤 Export Data")
+
+@st.cache_data
+
+def convert_df_to_excel(df):
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Filtered Data')
+    processed_data = output.getvalue()
+    return processed_data
+
+if not filtered_df.empty:
+    excel_data = convert_df_to_excel(filtered_df)
+    st.download_button(
+        label="📥 Download Filtered Data as Excel",
+        data=excel_data,
+        file_name='filtered_port_data.xlsx',
+        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+# Summary
+st.subheader("📝 Summary")
+st.markdown("""
+This dashboard offers stakeholders an overview of vessel performance indicators such as:
+- Time spent in ports
+- Average vessel age
+- Container and cargo capacity
+
+Use this tool to monitor port performance trends across various vessel types and time periods.
+""")
