@@ -6,118 +6,113 @@ import seaborn as sns
 # Load cleaned data
 df = pd.read_csv("us_port_cleaned_dataset.csv")
 
-# Sidebar filters
-st.sidebar.header("🔍 Filter Data")
-vessel_types = df["vessel_type"].unique()
-periods = df["period"].unique()
-selected_vessel = st.sidebar.selectbox("Select Vessel Type", ["All"] + list(vessel_types))
-selected_period = st.sidebar.selectbox("Select Period", ["All"] + list(periods))
+st.set_page_config(page_title="Maritime Port Dashboard", layout="wide")
 
-# Apply filters
-filtered_df = df.copy()
-if selected_vessel != "All":
-    filtered_df = filtered_df[filtered_df["vessel_type"] == selected_vessel]
-if selected_period != "All":
-    filtered_df = filtered_df[filtered_df["period"] == selected_period]
+# --- Sidebar Filters ---
+st.sidebar.header("🔎 Filter Options")
+vessel_options = df['vessel_type'].unique()
+period_options = df['period'].unique()
 
-# Page title and intro
-st.title("📊 Maritime Port Performance Dashboard (2022–2023)")
-st.markdown("""
-Welcome to the interactive dashboard that showcases insights from the UNCTAD Maritime Port Performance dataset.
-This app helps visualize vessel trends, port efficiency, and key statistics from 2022–2023.
-""")
+selected_vessel = st.sidebar.multiselect("Select Vessel Type(s)", vessel_options, default=vessel_options)
+selected_period = st.sidebar.multiselect("Select Period(s)", period_options, default=period_options)
 
-# Summary box
-st.markdown("""
-> **Project Summary**  
-> - Dataset: UNCTAD Maritime Port Statistics (2022–2023)  
-> - Focus: Vessel turnaround time, average ship size, operational consistency
-""")
+# Filter Data
+filtered_df = df[df['vessel_type'].isin(selected_vessel) & df['period'].isin(selected_period)]
 
-# Key Insights
-st.header("📌 Key EDA Insights")
-st.markdown("""
-- **Vessel Age**: Average age ~15–18 years. Container and LNG ships tend to be newer.
-- **Time in Port**: Container ships are faster in turnaround; Breakbulk and passenger ships stay longer.
-- **Vessel Size & Capacity**: Larger GT often corresponds with higher cargo (DWT) and container (TEU) capacities.
-- **Period Consistency**: Stable metrics across 2022–2023; no drastic performance shifts.
-""")
+# --- Tabs Layout ---
+tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "📈 Visualizations", "📝 Summary"])
 
-# Tabs layout
-plot_tabs = st.tabs(["Boxplots", "Correlation", "Capacity Comparison", "Narrative"])
+# ========== TAB 1: DASHBOARD ==========
+with tab1:
+    st.title("📊 Maritime Port Performance Dashboard (2022–2023)")
+    st.markdown("This dashboard provides interactive insights into UNCTAD’s maritime port performance data (2022–2023).")
+    
+    # --- KPI Section ---
+    st.subheader("📌 Key Performance Indicators (KPIs)")
 
-# Boxplots Tab
-with plot_tabs[0]:
-    st.subheader("📦 Boxplots")
-    plot_type = st.selectbox("Choose a boxplot to display", [
-        "Time in Port by Vessel Type",
-        "Average Size (GT) by Vessel Type",
-        "Time in Port by Period",
-        "Average Size (GT) by Period"
+    kpi1, kpi2, kpi3 = st.columns(3)
+    kpi1.metric("Avg. Time in Port (Days)", f"{filtered_df['median_time_in_port'].mean():.1f}")
+    kpi2.metric("Avg. Vessel Age", f"{filtered_df['avg_vessel_age'].mean():.1f} yrs")
+    kpi3.metric("Avg. Container Capacity (TEU)", f"{filtered_df['avg_container_capacity_TEU'].mean():,.0f}")
+
+    # --- Tooltip help ---
+    st.help("KPI: Key Performance Indicator — a metric summarizing an important performance attribute.")
+
+    # --- Export Button ---
+    csv = filtered_df.to_csv(index=False).encode('utf-8')
+    st.download_button("📥 Export Filtered Data to CSV", data=csv, file_name="filtered_port_data.csv", mime='text/csv')
+
+# ========== TAB 2: VISUALIZATIONS ==========
+with tab2:
+    st.header("📈 Interactive Visualizations")
+
+    # Select plot
+    plot_type = st.selectbox("Choose a plot to display", [
+        "Boxplot: Time in Port by Vessel Type",
+        "Boxplot: Average Size (GT) by Vessel Type",
+        "Boxplot: Time in Port by Period",
+        "Boxplot: Average Size (GT) by Period",
+        "Correlation Heatmap"
     ])
 
-    if plot_type == "Time in Port by Vessel Type":
+    if plot_type == "Boxplot: Time in Port by Vessel Type":
         fig, ax = plt.subplots(figsize=(10,5))
         sns.boxplot(x='vessel_type', y='median_time_in_port', data=filtered_df, ax=ax)
         plt.xticks(rotation=45)
         st.pyplot(fig)
 
-    elif plot_type == "Average Size (GT) by Vessel Type":
+    elif plot_type == "Boxplot: Average Size (GT) by Vessel Type":
         fig, ax = plt.subplots(figsize=(10,5))
         sns.boxplot(x='vessel_type', y='avg_size_GT', data=filtered_df, ax=ax)
         plt.xticks(rotation=45)
         st.pyplot(fig)
 
-    elif plot_type == "Time in Port by Period":
+    elif plot_type == "Boxplot: Time in Port by Period":
         fig, ax = plt.subplots(figsize=(10,5))
         sns.boxplot(x='period', y='median_time_in_port', data=filtered_df, ax=ax)
         plt.xticks(rotation=45)
         st.pyplot(fig)
 
-    elif plot_type == "Average Size (GT) by Period":
+    elif plot_type == "Boxplot: Average Size (GT) by Period":
         fig, ax = plt.subplots(figsize=(10,5))
         sns.boxplot(x='period', y='avg_size_GT', data=filtered_df, ax=ax)
         plt.xticks(rotation=45)
         st.pyplot(fig)
 
-# Correlation Tab
-with plot_tabs[1]:
-    st.subheader("🔗 Correlation Heatmap")
-    numerical_cols = filtered_df.select_dtypes(include='number')
-    fig, ax = plt.subplots(figsize=(12,10))
-    sns.heatmap(numerical_cols.corr(), annot=True, cmap='coolwarm', ax=ax)
-    st.pyplot(fig)
+    elif plot_type == "Correlation Heatmap":
+        numerical_cols = filtered_df.select_dtypes(include='number')
+        fig, ax = plt.subplots(figsize=(12,10))
+        sns.heatmap(numerical_cols.corr(), annot=True, cmap='coolwarm', ax=ax)
+        st.pyplot(fig)
 
-# Capacity Comparison Tab
-with plot_tabs[2]:
-    st.subheader("📊 Compare Vessel Capacities (TEU / DWT / GT)")
-    metric_choice = st.selectbox("Select Metric to Compare", ["avg_teu", "avg_dwt", "avg_size_GT"])
-    comp_df = (
-        filtered_df.groupby("vessel_type")[metric_choice]
-        .mean()
-        .reset_index()
-        .sort_values(by=metric_choice, ascending=False)
+    # --- Line Chart Section ---
+    st.subheader("📉 Line Chart: Compare Metrics Across Vessel Types")
+
+    metric_choice = st.selectbox(
+        "Choose a metric",
+        ['median_time_in_port', 'avg_size_GT', 'avg_cargo_capacity_DWT', 'avg_container_capacity_TEU']
     )
-    fig7, ax7 = plt.subplots(figsize=(10,5))
-    sns.barplot(x=metric_choice, y="vessel_type", data=comp_df, ax=ax7, palette="viridis")
-    ax7.set_title(f"Average {metric_choice.upper()} by Vessel Type")
-    st.pyplot(fig7)
 
-# Narrative Tab
-with plot_tabs[3]:
-    st.subheader("📘 Maritime Analytics Narrative")
+    line_df = filtered_df.groupby("vessel_type")[metric_choice].mean().reset_index()
+    fig_line, ax = plt.subplots(figsize=(10, 5))
+    sns.lineplot(data=line_df, x='vessel_type', y=metric_choice, marker='o', ax=ax)
+    plt.xticks(rotation=45)
+    plt.title(f"{metric_choice} by Vessel Type")
+    st.pyplot(fig_line)
+
+# ========== TAB 3: SUMMARY ==========
+with tab3:
+    st.header("📝 Summary of Findings")
     st.markdown("""
-    ### Project Summary
+    ### 📌 EDA Insights
+    - **Vessel Age**: Average age ~15–18 years. Container and LNG ships tend to be newer.
+    - **Time in Port**: Container ships are faster in turnaround; Breakbulk and passenger ships stay longer.
+    - **Vessel Size & Capacity**: Larger GT often corresponds with higher cargo (DWT) and container (TEU) capacities.
+    - **Period Consistency**: Stable metrics across 2022–2023; no drastic performance shifts.
 
-    This dashboard presents key insights from the UNCTAD port performance data for 2022–2023. It focuses on:
-    - Turnaround times by vessel types
-    - Vessel capacity comparisons
-    - Operational trends over time
-
-    ### Recommendations
-    - Encourage modernization of older vessel types.
-    - Identify ports with long turnaround times for process optimization.
-    - Explore clustering to group ports or vessels by efficiency patterns.
-
-    Data serves as a strong foundation for forecasting, optimization, and benchmarking within maritime logistics.
+    ### 📌 Summary
+    - **Container ships** appear most efficient in port time.
+    - **LNG carriers** show larger average sizes.
+    - **Operational consistency** was maintained across both years.
+    - Dataset suitable for clustering or unsupervised ML in future.
     """)
