@@ -124,3 +124,8 @@ This dashboard offers stakeholders an overview of vessel performance indicators 
 
 Use this tool to monitor port performance trends across various vessel types and time periods.
 """)
+# === FOOTER ===
+st.markdown("""
+---
+<small>© 2025 TopTech Digital Intelligence LLC | Analytics for informed decisions</small>
+""", unsafe_allow_html=True)
