@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from io import BytesIO
 
-st.write("Dataset columns:", df.columns.tolist())
 
 # Page config
 st.set_page_config(
@@ -22,6 +21,7 @@ def load_data():
     return df
 
 df = load_data()
+st.write("Dataset columns:", df.columns.tolist())
 
 # Sidebar filters
 st.sidebar.title("🔎 Filter Options")
