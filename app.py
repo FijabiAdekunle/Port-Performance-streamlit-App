@@ -1,4 +1,3 @@
-@ -1,190 +0,0 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -49,8 +48,7 @@ filtered_df = df[
     (df["period"].isin(selected_periods))
 ]
 
-# Header
-st.title("📊 Maritime Port Performance Dashboard (2022–2023)")
+
 
 # KPI Section - USING CORRECT COLUMN NAMES
 st.subheader("📌 Key Performance Indicators (KPIs)")
