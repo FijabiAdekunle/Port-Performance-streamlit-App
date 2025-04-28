@@ -4,14 +4,17 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from io import BytesIO
 
-# Page config
-st.set_page_config(
-    page_title="Maritime Port Performance Dashboard",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+plt.style.use('seaborn-v0_8-whitegrid')
+sns.set_palette("viridis")
 
-# Load data
+# Page configuration
+logo_col, title_col = st.columns([1, 4])
+with logo_col:
+    st.image("https://i.postimg.cc/V6N30WsM/Logo-Round-Image.png", width=100)  # Replace with your logo path
+with title_col:
+    st.title("📊 Maritime Port Performance Dashboard (2022–2023)")
+
+# Loading the data
 @st.cache_data
 def load_data():
     df = pd.read_csv("cleaned_port_performance_dataset_2022_2023.csv")
@@ -60,32 +63,94 @@ col1.metric("Avg. Time in Port (Days)", f"{avg_time:.1f}")
 col2.metric("Avg. Vessel Age", f"{avg_age:.1f} yrs")
 col3.metric("Avg. Cargo Capacity (DWT)", f"{int(avg_dwt):,}")
 
-# Visualizations - USING CORRECT COLUMN NAMES
-st.subheader("📈 Visualizations")
-metric_choice = st.selectbox("Choose a metric to visualize", [
-    "median_time_in_port",
-    "avg_vessel_age",
-    "avg_cargo_capacity_dwt",
-    "avg_size_gt",
-    "max_cargo_capacity_dwt"
-])
+# ---- Visualization Section ----
+st.subheader("📈 Advanced Performance Analysis")
 
-if not filtered_df.empty:
-    fig, ax = plt.subplots(figsize=(12, 6))
-    sns.lineplot(
+# Plot type selector
+plot_type = st.selectbox(
+    "Choose Plot Type",
+    ["Line Plot", "Bar Chart", "Box Plot", "Scatter Plot"]
+)
+
+# Metric selector (updated with DWT)
+metric = st.selectbox(
+    "Select Metric",
+    ["median_time_in_port", "avg_vessel_age", "avg_cargo_capacity_dwt", "avg_size_gt"]
+)
+
+# Create tabs for different views
+tab1, tab2, tab3 = st.tabs(["Trend Analysis", "Distribution", "Comparison"])
+
+with tab1:
+    # Dynamic plot based on selection
+    fig1, ax1 = plt.subplots(figsize=(10, 5))
+    if plot_type == "Line Plot":
+        sns.lineplot(
+            data=filtered_df,
+            x="period",
+            y=metric,
+            hue="vessel_type",
+            style="vessel_type",
+            markers=True,
+            ax=ax1
+        )
+    elif plot_type == "Bar Chart":
+        sns.barplot(
+            data=filtered_df,
+            x="period",
+            y=metric,
+            hue="vessel_type",
+            ax=ax1
+        )
+    ax1.set_title(f"{plot_type} of {metric.replace('_', ' ').title()}")
+    st.pyplot(fig1)
+
+with tab2:
+    # Distribution analysis
+    fig2, ax2 = plt.subplots(figsize=(10, 5))
+    sns.boxplot(
         data=filtered_df,
-        x="period",
-        y=metric_choice,
-        hue="vessel_type",
-        marker="o",
-        ax=ax
+        x="vessel_type",
+        y=metric,
+        palette="viridis",
+        ax=ax2
     )
-    ax.set_title(f"{metric_choice.replace('_', ' ').title()} Over Time")
+    ax2.set_title(f"Distribution by Vessel Type")
     plt.xticks(rotation=45)
-    st.pyplot(fig)
-else:
-    st.warning("No data available for selected filters.")
+    st.pyplot(fig2)
 
+with tab3:
+    # Scatter plot comparison
+    compare_metric = st.selectbox(
+        "Compare With",
+        [m for m in ["avg_vessel_age", "avg_size_gt"] if m != metric]
+    )
+    fig3, ax3 = plt.subplots(figsize=(10, 5))
+    sns.scatterplot(
+        data=filtered_df,
+        x=metric,
+        y=compare_metric,
+        hue="vessel_type",
+        size="avg_size_gt",
+        sizes=(20, 200),
+        alpha=0.7,
+        ax=ax3
+    )
+    ax3.set_title(f"{metric.replace('_', ' ')} vs {compare_metric.replace('_', ' ')}")
+    st.pyplot(fig3)
+
+# Add a histogram below
+st.subheader("📊 Metric Distribution")
+fig4, ax4 = plt.subplots(figsize=(10, 4))
+sns.histplot(
+    filtered_df[metric],
+    kde=True,
+    bins=15,
+    color='skyblue',
+    ax=ax4
+)
+ax4.set_xlabel(metric.replace('_', ' ').title())
+st.pyplot(fig4)
 
 # Export button
 st.subheader("📤 Export Data")
