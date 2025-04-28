@@ -1,3 +1,4 @@
+@ -1,190 +0,0 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
