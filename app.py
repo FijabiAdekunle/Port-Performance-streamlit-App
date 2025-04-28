@@ -10,7 +10,7 @@ sns.set_palette("viridis")
 # Page configuration
 logo_col, title_col = st.columns([1, 4])
 with logo_col:
-    st.image("https://i.postimg.cc/V6N30WsM/Logo-Round-Image.png", width=100)  # Replace with your logo path
+    st.image("https://i.postimg.cc/V6N30WsM/Logo-Round-Image.png", width=110) 
 with title_col:
     st.title("📊 Maritime Port Performance Dashboard (2022–2023)")
 
