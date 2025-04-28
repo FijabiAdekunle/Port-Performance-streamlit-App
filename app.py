@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from io import BytesIO
 
-
 # Page config
 st.set_page_config(
     page_title="Maritime Port Performance Dashboard",
@@ -14,14 +13,15 @@ st.set_page_config(
 
 # Load data
 @st.cache_data
-
 def load_data():
     df = pd.read_csv("cleaned_port_performance_dataset_2022_2023.csv")
-    df.columns = df.columns.str.strip()
+    df.columns = df.columns.str.strip().str.lower()  # Normalize to lowercase
     return df
 
 df = load_data()
-st.write("Dataset columns:", df.columns.tolist())
+
+# Show columns for debugging (remove in production)
+st.write("Available columns:", df.columns.tolist())
 
 # Sidebar filters
 st.sidebar.title("🔎 Filter Options")
@@ -48,50 +48,45 @@ filtered_df = df[
 
 # Header
 st.title("📊 Maritime Port Performance Dashboard (2022–2023)")
-st.markdown("This dashboard provides interactive insights into UNCTAD’s maritime port performance data (2022–2023).")
 
-# KPI Section
+# KPI Section - USING CORRECT COLUMN NAMES
 st.subheader("📌 Key Performance Indicators (KPIs)")
-
 col1, col2, col3 = st.columns(3)
 
-avg_time = filtered_df["Median_time_in_port_days_Value"].mean()
-avg_age = filtered_df["Average_age_of_vessels_years_Value"].mean()
-avg_teu = filtered_df["Average_cargo_carrying_capacity_dwt_per_vessel_Value"].mean() 
+avg_time = filtered_df["median_time_in_port"].mean()
+avg_age = filtered_df["avg_vessel_age"].mean()
+avg_dwt = filtered_df["avg_cargo_capacity_dwt"].mean()
 
-col1.metric("Avg. Time in Port (Days)", f"{avg_time:.1f}" if not pd.isna(avg_time) else "N/A")
-col2.metric("Avg. Vessel Age", f"{avg_age:.1f} yrs" if not pd.isna(avg_age) else "N/A")
-col3.metric("Avg. Cargo Capacity (DWT)", f"{int(avg_teu):,}" if not pd.isna(avg_teu) else "N/A") 
+col1.metric("Avg. Time in Port (Days)", f"{avg_time:.1f}")
+col2.metric("Avg. Vessel Age", f"{avg_age:.1f} yrs")
+col3.metric("Avg. Cargo Capacity (DWT)", f"{int(avg_dwt):,}")
 
-st.info("💡 **KPI** = Key Performance Indicator — a metric summarizing an important performance attribute.")
-
-# Visualizations
+# Visualizations - USING CORRECT COLUMN NAMES
 st.subheader("📈 Visualizations")
-
 metric_choice = st.selectbox("Choose a metric to visualize", [
-    "Median_time_in_port_days_Value",
-    "Average_age_of_vessels_years_Value",
-    "Average_cargo_carrying_capacity_dwt_per_vessel_Value",
-    "Average_size_GT_of_vessels_Value",
-    "Maximum_cargo_carrying_capacity_dwt_of_vessels_Value"
+    "median_time_in_port",
+    "avg_vessel_age",
+    "avg_cargo_capacity_dwt",
+    "avg_size_gt",
+    "max_cargo_capacity_dwt"
 ])
 
-st.caption("Metric displayed across vessel types and periods.")
-
 if not filtered_df.empty:
-    grouped_df = (
-        filtered_df.groupby(["period", "vessel_type"])[metric_choice]
-        .mean()
-        .reset_index()
+    fig, ax = plt.subplots(figsize=(12, 6))
+    sns.lineplot(
+        data=filtered_df,
+        x="period",
+        y=metric_choice,
+        hue="vessel_type",
+        marker="o",
+        ax=ax
     )
-    plt.figure(figsize=(12, 6))
-    sns.lineplot(data=grouped_df, x="period", y=metric_choice, hue="vessel_type", marker="o")
-    plt.title(f"{metric_choice.replace('_', ' ').title()} Over Time by Vessel Type")
+    ax.set_title(f"{metric_choice.replace('_', ' ').title()} Over Time")
     plt.xticks(rotation=45)
-    plt.tight_layout()
-    st.pyplot(plt.gcf())
+    st.pyplot(fig)
 else:
-    st.warning("No data available for the selected filters.")
+    st.warning("No data available for selected filters.")
+
 
 # Export button
 st.subheader("📤 Export Data")
