@@ -20,8 +20,7 @@ def load_data():
 
 df = load_data()
 
-# Show columns for debugging (remove in production)
-st.write("Available columns:", df.columns.tolist())
+
 
 # Sidebar filters
 st.sidebar.title("🔎 Filter Options")
