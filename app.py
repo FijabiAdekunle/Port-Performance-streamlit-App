@@ -185,5 +185,5 @@ Use this tool to monitor port performance trends across various vessel types and
 # === FOOTER ===
 st.markdown("""
 ---
-<small>© 2025 TopTech Digital Intelligence LLC | Analytics for informed decisions</small>
+<small>© 2025 TopTech Dynamics Limited | Analytics for informed decisions</small>
 """, unsafe_allow_html=True)
