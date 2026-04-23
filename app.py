@@ -375,7 +375,7 @@ st.markdown("""
 try:
     col_logo, col_title = st.columns([1, 6])
     with col_logo:
-        st.image("Port.png", width=90)
+        st.image("Port.png", width=150)
     with col_title:
         st.write("")  # vertical spacer
 except Exception:
