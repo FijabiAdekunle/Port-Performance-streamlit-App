@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import seaborn as sns
 from io import BytesIO
+import base64
+from pathlib import Path
 
 # ──────────────────────────────────────────────
 #  PAGE CONFIG
@@ -99,9 +101,11 @@ section[data-testid="stSidebar"] h3 {
 .header-banner img {
     border-radius: 50%;
     border: 3px solid var(--mint-400);
-    width: 90px;
-    height: 90px;
+    width: 120px;
+    height: 120px;
     object-fit: cover;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 6px rgba(0,201,167,0.15);
 }
 .header-title {
     color: var(--white);
@@ -361,25 +365,31 @@ filtered_df = df[
 # ──────────────────────────────────────────────
 #  HEADER BANNER
 # ──────────────────────────────────────────────
-st.markdown("""
+def _img_to_b64(path: str) -> str:
+    """Read a local image and return a base64 data-URI so it embeds in HTML."""
+    p = Path(path)
+    if not p.exists():
+        return ""
+    ext = p.suffix.lstrip(".").lower()
+    mime = "jpeg" if ext in ("jpg", "jpeg") else ext
+    data = base64.b64encode(p.read_bytes()).decode()
+    return f"data:image/{mime};base64,{data}"
+
+logo_src = _img_to_b64("logo.jpg")
+logo_tag = (
+    f'<img src="{logo_src}" alt="TopTech Dynamics Logo">'
+    if logo_src else ""
+)
+
+st.markdown(f"""
 <div class="header-banner">
-    <img src="Port.png" alt="Port Logo" onerror="this.style.display='none'">
+    {logo_tag}
     <div>
         <p class="header-title">⚓ Maritime Port Performance Dashboard</p>
         <p class="header-sub">2022 – 2023 · Vessel Analytics · TopTech Dynamics Limited</p>
     </div>
 </div>
 """, unsafe_allow_html=True)
-
-# Fallback if PNG can't render inline via HTML (Streamlit local files)
-try:
-    col_logo, col_title = st.columns([1, 6])
-    with col_logo:
-        st.image("Port.png", width=150)
-    with col_title:
-        st.write("")  # vertical spacer
-except Exception:
-    pass
 
 if filtered_df.empty:
     st.warning("No data matches your current filter selection. Please adjust the sidebar filters.")
